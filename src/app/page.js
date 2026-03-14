@@ -1,7 +1,8 @@
 'use client'
 import Link from 'next/link'
 import Header from '@/components/Header'
-import AdPlaceholder from '@/components/AdPlaceholder'
+import ManageCookiesButton from '@/components/ManageCookiesButton'
+import AdUnit from '@/components/AdUnit'
 
 export default function Home() {
   return (
@@ -10,12 +11,6 @@ export default function Home() {
 
       {/* Desktop: 3-column layout */}
       <div className="flex-1 flex justify-center">
-        {/* Left ad column - desktop only */}
-        <aside className="hidden xl:flex flex-col items-center gap-6 pt-12 px-6 w-[200px] shrink-0">
-          <AdPlaceholder format="rectangle" />
-          <AdPlaceholder format="halfpage" />
-        </aside>
-
         {/* Main content */}
         <main className="flex-1 max-w-2xl px-5 py-10 flex flex-col items-center">
           {/* Hero */}
@@ -67,6 +62,9 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Publicité — remplace slot="XXXXXXXX" par ton data-ad-slot AdSense */}
+          <AdUnit slot="7759880253" className="mt-10 w-full max-w-md" />
+
           {/* Stats */}
           <div className="w-full max-w-md mt-14 grid grid-cols-3 gap-4 animate-fade-in" style={{ animationDelay: '0.3s' }}>
             {[
@@ -82,22 +80,7 @@ export default function Home() {
             ))}
           </div>
 
-          {/* Mobile ad */}
-          <div className="w-full max-w-md mt-10 lg:hidden">
-            <AdPlaceholder format="banner" />
-          </div>
-
-          {/* Large ad */}
-          <div className="w-full max-w-lg mt-10 animate-fade-in" style={{ animationDelay: '0.45s' }}>
-            <AdPlaceholder format="billboard" />
-          </div>
         </main>
-
-        {/* Right ad column - desktop only */}
-        <aside className="hidden xl:flex flex-col items-center gap-6 pt-12 px-6 w-[200px] shrink-0">
-          <AdPlaceholder format="rectangle" />
-          <AdPlaceholder format="halfpage" />
-        </aside>
       </div>
 
       {/* Footer */}
@@ -107,8 +90,9 @@ export default function Home() {
             Ce test ne constitue pas un conseil de vote. Politikz est une plateforme indépendante non-partisane.
           </p>
           <div className="mt-3 flex justify-center gap-4 text-slate-400">
-            <span className="text-[10px] hover:text-white cursor-pointer transition-colors">Mentions légales</span>
-            <span className="text-[10px] hover:text-white cursor-pointer transition-colors">Confidentialité</span>
+            <Link href="/mentions-legales" className="text-[10px] hover:text-white transition-colors">Mentions légales</Link>
+            <Link href="/politique-de-confidentialite" className="text-[10px] hover:text-white transition-colors">Confidentialité</Link>
+            <ManageCookiesButton />
           </div>
         </div>
       </footer>

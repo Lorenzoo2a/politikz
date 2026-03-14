@@ -1,10 +1,9 @@
 'use client'
-import { useState, useCallback, useMemo, Suspense } from 'react'
+import { useState, useCallback, useMemo, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { questions as allQuestions, chapitres } from '@/data/quizData'
 import { calculerResultats } from '@/lib/matching'
 import { supabase } from '@/lib/supabase'
-import AdPlaceholder from '@/components/AdPlaceholder'
 
 /**
  * Sélectionne 30 questions réparties équitablement sur les 9 chapitres
@@ -42,6 +41,7 @@ function QuizContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const isRapide = searchParams.get('mode') === 'rapide'
+  const compareId = searchParams.get('compare')
 
   const questions = useMemo(() => {
     return isRapide ? selectionnerQuestionsRapides() : allQuestions
@@ -49,11 +49,13 @@ function QuizContent() {
 
   const [questionIndex, setQuestionIndex] = useState(0)
   const [reponses, setReponses] = useState({})
+  const reponsesRef = useRef({})
+  reponsesRef.current = reponses
   const [animState, setAnimState] = useState('visible') // 'visible' | 'exiting' | 'entering'
   const [chargement, setChargement] = useState(false)
 
-  const question = questions[questionIndex]
   const totalQuestions = questions.length
+  const question = questions[Math.min(questionIndex, totalQuestions - 1)]
   const pourcentage = Math.round(((questionIndex) / totalQuestions) * 100)
   const chapitreActuel = chapitres.find(ch => ch.questions.includes(question.id))
   const reponseExistante = reponses[question.id]?.choix
@@ -85,24 +87,32 @@ function QuizContent() {
 
   async function terminerQuiz() {
     setChargement(true)
-    const resultats = calculerResultats(reponses)
-    const shareId = Math.random().toString(36).substring(2, 10)
-
     try {
-      await supabase.from('resultats').insert({
+      const currentReponses = reponsesRef.current
+      const resultats = calculerResultats(currentReponses)
+      const shareId = Math.random().toString(36).substring(2, 10)
+
+      const { error: insertError } = await supabase.from('resultats').insert({
         share_id: shareId,
-        reponses: reponses,
+        reponses: currentReponses,
         scores: resultats.map(r => ({ candidat_id: r.candidat.id, pourcentage: r.pourcentage })),
         created_at: new Date().toISOString()
       })
-    } catch (err) {
-      console.log('Sauvegarde Supabase optionnelle:', err)
-    }
+      if (insertError) {
+        console.error('Supabase insert échoué — partage désactivé:', insertError)
+        localStorage.setItem('politikz_share_saved', 'false')
+      } else {
+        localStorage.setItem('politikz_share_saved', 'true')
+      }
 
-    localStorage.setItem('politikz_resultats', JSON.stringify(resultats))
-    localStorage.setItem('politikz_reponses', JSON.stringify(reponses))
-    localStorage.setItem('politikz_share_id', shareId)
-    router.push(`/resultats/${shareId}`)
+      localStorage.setItem('politikz_resultats', JSON.stringify(resultats))
+      localStorage.setItem('politikz_reponses', JSON.stringify(currentReponses))
+      localStorage.setItem('politikz_share_id', shareId)
+      router.push(`/resultats/${shareId}${compareId ? `?compare=${compareId}` : ''}`)
+    } catch (err) {
+      console.error('Erreur terminerQuiz:', err)
+      setChargement(false)
+    }
   }
 
   if (chargement) {
@@ -133,20 +143,8 @@ function QuizContent() {
 
       {/* 3-column desktop layout */}
       <div className="flex-1 flex justify-center">
-
-        {/* Left ads - desktop */}
-        <aside className="hidden xl:flex flex-col items-center gap-5 pt-8 px-4 w-[200px] shrink-0">
-          <AdPlaceholder format="rectangle" />
-          <AdPlaceholder format="skyscraper" />
-        </aside>
-
         {/* Main quiz area */}
         <main className="flex-1 max-w-xl w-full px-4 py-5 flex flex-col">
-
-          {/* Mobile ad top */}
-          <div className="xl:hidden mb-4">
-            <AdPlaceholder format="banner" />
-          </div>
 
           {/* Question card */}
           <div className={`bg-white rounded-2xl p-5 md:p-7 shadow-2xl shadow-black/20 flex flex-col flex-1 ${animClass}`} key={questionIndex}>
@@ -222,17 +220,7 @@ function QuizContent() {
             </button>
           </div>
 
-          {/* Mobile ad bottom */}
-          <div className="xl:hidden mt-4">
-            <AdPlaceholder format="banner" />
-          </div>
         </main>
-
-        {/* Right ads - desktop */}
-        <aside className="hidden xl:flex flex-col items-center gap-5 pt-8 px-4 w-[200px] shrink-0">
-          <AdPlaceholder format="rectangle" />
-          <AdPlaceholder format="skyscraper" />
-        </aside>
       </div>
     </div>
   )
