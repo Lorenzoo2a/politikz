@@ -68,6 +68,37 @@ body {
   background: rgba(255,255,255,0.02);
 }
 
+@keyframes heroEntrance {
+  from { opacity: 0; transform: translateY(28px) scale(0.97); filter: blur(3px); }
+  to   { opacity: 1; transform: translateY(0)    scale(1);    filter: blur(0);   }
+}
+.animate-hero-entrance {
+  animation: heroEntrance 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes staggerIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-stagger {
+  animation: staggerIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  opacity: 0;
+}
+
+@keyframes bgOrb1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(60px, 80px) scale(1.1); }
+  66%  { transform: translate(-40px, 40px) scale(0.95); }
+}
+@keyframes bgOrb2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33%  { transform: translate(-80px, -60px) scale(1.05); }
+  66%  { transform: translate(50px, -30px) scale(0.9); }
+}
+@keyframes bgOrb3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%  { transform: translate(30px, -70px) scale(1.08); }
+}
+
 ::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }

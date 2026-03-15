@@ -1,22 +1,33 @@
-import { questions, candidats, chapitres } from '@/data/quizData'
+import { questions as defaultQuestions, candidats as defaultCandidats, chapitres as defaultChapitres } from '@/data/quizData'
 
 /**
  * Calcule le pourcentage de match entre les réponses de l'utilisateur et chaque candidat
- * 
+ *
  * Système à 5 niveaux :
  *   +2 = Tout à fait d'accord    →  poids fort pour la comparaison
  *   +1 = Plutôt d'accord         →  poids normal
  *    0 = Je ne sais pas           →  ignoré dans le calcul
  *   -1 = Plutôt pas d'accord     →  poids normal
  *   -2 = Pas du tout d'accord    →  poids fort pour la comparaison
- * 
+ *
  * Comparaison avec le candidat (qui a 1, -1, ou 0) :
  *   - User +2 et candidat +1 : très bon match → 2 points sur 2
  *   - User +1 et candidat +1 : bon match → 1 point sur 1
  *   - User +2 et candidat -1 : fort désaccord → 0 points sur 2
  *   - User -2 et candidat -1 : très bon match (les deux sont contre) → 2 points sur 2
+ *
+ * @param {object} reponses - Les réponses de l'utilisateur
+ * @param {object|null} electionData - Données de l'élection { candidats, questions, chapitres } (optionnel, défaut 2022)
  */
-export function calculerResultats(reponses) {
+export function calculerResultats(reponses, electionData = null) {
+  const candidats = electionData?.candidats ?? defaultCandidats
+  const questions = electionData?.questions ?? defaultQuestions
+  const chapitres = electionData?.chapitres ?? defaultChapitres
+
+  // Poids par chapitre (défini dans les données, défaut 1)
+  const chapPoids = {}
+  chapitres.forEach(ch => { chapPoids[ch.id] = ch.poids || 1 })
+
   const scores = candidats.map((candidat, index) => {
     let pointsObtenus = 0
     let pointsMax = 0
@@ -33,12 +44,16 @@ export function calculerResultats(reponses) {
       const positionCandidat = question.positions[index]
       if (positionCandidat === 0) return
 
-      // Le poids dépend de l'intensité de la réponse (1 ou 2)
+      // Poids combiné : intensité × poids question × poids chapitre
       const intensite = Math.abs(reponse.choix)
-      pointsMax += intensite
+      const qPoids = question.poids || 1
+      const cPoids = chapPoids[question.chapitre] || 1
+      const weight = intensite * qPoids * cPoids
+
+      pointsMax += weight
 
       if (scoresParChapitre[question.chapitre]) {
-        scoresParChapitre[question.chapitre].max += intensite
+        scoresParChapitre[question.chapitre].max += weight
       }
 
       // Vérifier si l'utilisateur et le candidat sont du même côté
@@ -46,13 +61,11 @@ export function calculerResultats(reponses) {
       const candidatPositif = positionCandidat > 0
 
       if (userPositif === candidatPositif) {
-        // Même côté → match
-        pointsObtenus += intensite
+        pointsObtenus += weight
         if (scoresParChapitre[question.chapitre]) {
-          scoresParChapitre[question.chapitre].points += intensite
+          scoresParChapitre[question.chapitre].points += weight
         }
       }
-      // Sinon : désaccord, 0 points
     })
 
     const pourcentage = pointsMax > 0 ? Math.round((pointsObtenus / pointsMax) * 100) : 0
@@ -119,6 +132,41 @@ export function genererDetailsCandidat(resultat) {
       desaccords.push({ nom: theme.nom, emoji: theme.emoji, pourcentage: theme.pourcentage })
     }
   })
+
+  return { accords: accords.slice(0, 4), desaccords: desaccords.slice(0, 4) }
+}
+
+/**
+ * Génère les questions spécifiques d'accord/désaccord avec un candidat donné
+ * @param {number} candidatIndex - Index du candidat dans le tableau positions[]
+ * @param {object} reponses - Réponses de l'utilisateur
+ * @param {Array} questions - Toutes les questions
+ * @param {Array} chapitres - Chapitres avec leur poids
+ */
+export function genererQuestionsAlignement(candidatIndex, reponses, questions, chapitres) {
+  const chapPoids = {}
+  chapitres.forEach(ch => { chapPoids[ch.id] = ch.poids || 1 })
+
+  const accords = []
+  const desaccords = []
+
+  questions.forEach(q => {
+    const rep = reponses?.[q.id]
+    if (!rep || rep.choix === 0) return
+    const posCandidat = q.positions?.[candidatIndex]
+    if (!posCandidat || posCandidat === 0) return
+
+    const intensite = Math.abs(rep.choix)
+    const weight = intensite * (q.poids || 1) * (chapPoids[q.chapitre] || 1)
+    const accord = (rep.choix > 0) === (posCandidat > 0)
+    const item = { texte: q.texte, userChoix: rep.choix, candidatPos: posCandidat, weight }
+
+    if (accord) accords.push(item)
+    else desaccords.push(item)
+  })
+
+  accords.sort((a, b) => b.weight - a.weight)
+  desaccords.sort((a, b) => b.weight - a.weight)
 
   return { accords: accords.slice(0, 4), desaccords: desaccords.slice(0, 4) }
 }
