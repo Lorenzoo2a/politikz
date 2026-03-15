@@ -432,9 +432,7 @@ export default function QuestionsAdmin() {
       const res  = await fetch(`/api/admin/questions?election=${electionId}`)
       const json = await res.json()
       if (json.ok && json.questions?.length > 0) {
-        const idOffset = electionId === '2027' ? 1000 : 0
-        const mapped = json.questions.map(q => ({ ...q, id: q.id - idOffset }))
-        setQuestions(mapped); setSynced(true)
+        setQuestions(json.questions); setSynced(true)
       } else {
         setQuestions(staticQ.map(q => ({ ...q, actif: true, _static: true }))); setSynced(false)
       }
@@ -464,19 +462,22 @@ export default function QuestionsAdmin() {
       })
       const json = await res.json()
       if (json.ok) {
-        const idOffset = electionId === '2027' ? 1000 : 0
-        const newQ = { ...json.question, id: json.question.id - idOffset }
-        setQuestions(prev => [...prev, newQ])
-        setSelectedQ(newQ)
+        setQuestions(prev => [...prev, json.question])
+        setSelectedQ(json.question)
       }
     } else {
       const updatedQ = { ...selectedQ, ...data }
-      await fetch('/api/admin/questions', {
+      const res  = await fetch('/api/admin/questions', {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token: getToken(), id: selectedQ.id, question: updatedQ }),
       })
-      setQuestions(prev => prev.map(q => q.id === selectedQ.id ? updatedQ : q))
-      setSelectedQ(updatedQ)
+      const json = await res.json()
+      if (json.ok) {
+        setQuestions(prev => prev.map(q => q.id === selectedQ.id ? updatedQ : q))
+        setSelectedQ(updatedQ)
+      } else {
+        alert(`Erreur sauvegarde : ${json.error || 'inconnue'}`)
+      }
     }
   }
 

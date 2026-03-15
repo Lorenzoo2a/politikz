@@ -31,6 +31,8 @@ export async function POST(req) {
     positions: q.positions,
     actif: true,
     election,
+    source_url: q.source_url ?? null,
+    sous_questions: q.sousQuestions ?? q.sous_questions ?? [],
   }))
 
   const { error } = await supabase.from('quiz_questions').upsert(rows, { onConflict: 'id' })
